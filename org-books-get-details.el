@@ -37,6 +37,7 @@
 
 (defcustom org-books-url-patterns
   '((amazon . "^\\(www\\.\\)?amazon\\.")
+    (douban . "book\\.douban\\.com")
     (goodreads . "^\\(www\\.\\)?goodreads\\.com")
     (isbn . "openlibrary\\.org"))
   "Patterns for detecting url types.")
@@ -60,6 +61,7 @@
 
 (defun org-books-get-details (url url-type)
   (cl-case url-type
+    (douban (org-books-get-details-douban url))
     (amazon (org-books-get-details-amazon url))
     (goodreads (org-books-get-details-goodreads url))
     (isbn (org-books-get-details-isbn url))))
@@ -99,6 +101,14 @@
          (title (gethash "title" data))
          (author (gethash "by_statement" data)))
     (list title author `(("ISBN" . ,url)))))
+
+(defun org-books-get-details-douban (url)
+  "Get book details from douban page."
+  (let* ((page-node (enlive-fetch url))
+         (title (org-books--clean-str (s-join " - " (mapcar #'enlive-text (enlive-query-all page-node [h1 span])))))
+         (author (org-books--clean-str (s-join ", " (mapcar #'enlive-text (enlive-query-all page-node [:info span a]))))))
+    (if (not (string-equal title ""))
+        (list title author `(("DOUBAN" . ,url))))))
 
 (provide 'org-books-get-details)
 
